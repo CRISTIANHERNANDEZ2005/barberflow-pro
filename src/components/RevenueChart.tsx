@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Service {
@@ -11,36 +13,115 @@ interface RevenueChartProps {
   services: Service[];
 }
 
+type Period = "week" | "month" | "year";
+
 const RevenueChart = ({ services }: RevenueChartProps) => {
-  // Get last 7 days data
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
+  const [period, setPeriod] = useState<Period>("week");
 
-  const chartData = last7Days.map((date) => {
-    const nextDay = new Date(date);
-    nextDay.setDate(nextDay.getDate() + 1);
+  const getChartData = () => {
+    let days: Date[] = [];
+    let format: Intl.DateTimeFormatOptions = {};
 
-    const dayServices = services.filter((s) => {
-      const serviceDate = new Date(s.created_at);
-      return serviceDate >= date && serviceDate < nextDay;
+    switch (period) {
+      case "week":
+        days = Array.from({ length: 7 }, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - (6 - i));
+          date.setHours(0, 0, 0, 0);
+          return date;
+        });
+        format = { weekday: "short", day: "numeric" };
+        break;
+
+      case "month":
+        days = Array.from({ length: 30 }, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - (29 - i));
+          date.setHours(0, 0, 0, 0);
+          return date;
+        });
+        format = { day: "numeric", month: "short" };
+        break;
+
+      case "year":
+        days = Array.from({ length: 12 }, (_, i) => {
+          const date = new Date();
+          date.setMonth(date.getMonth() - (11 - i));
+          date.setDate(1);
+          date.setHours(0, 0, 0, 0);
+          return date;
+        });
+        format = { month: "short" };
+        break;
+    }
+
+    return days.map((date) => {
+      const nextPeriod = new Date(date);
+      if (period === "year") {
+        nextPeriod.setMonth(nextPeriod.getMonth() + 1);
+      } else {
+        nextPeriod.setDate(nextPeriod.getDate() + 1);
+      }
+
+      const periodServices = services.filter((s) => {
+        const serviceDate = new Date(s.created_at);
+        return serviceDate >= date && serviceDate < nextPeriod;
+      });
+
+      const revenue = periodServices.reduce((sum, s) => sum + Number(s.price), 0);
+
+      return {
+        name: date.toLocaleDateString("es-ES", format),
+        ingresos: revenue,
+        servicios: periodServices.length,
+      };
     });
+  };
 
-    const revenue = dayServices.reduce((sum, s) => sum + Number(s.price), 0);
+  const chartData = getChartData();
 
-    return {
-      name: date.toLocaleDateString("es-ES", { weekday: "short", day: "numeric" }),
-      ingresos: revenue,
-      servicios: dayServices.length,
-    };
-  });
+  const getPeriodTitle = () => {
+    switch (period) {
+      case "week":
+        return "Últimos 7 Días";
+      case "month":
+        return "Últimos 30 Días";
+      case "year":
+        return "Últimos 12 Meses";
+    }
+  };
 
   return (
     <Card className="bg-card/50 backdrop-blur-xl border-border/50 p-6 mb-8 shadow-[0_8px_32px_hsl(var(--background)/0.4)]">
-      <h2 className="text-2xl font-bold text-foreground mb-6">Ingresos Últimos 7 Días</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Ingresos {getPeriodTitle()}</h2>
+        <div className="flex gap-2">
+          <Button
+            variant={period === "week" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setPeriod("week")}
+            className={period === "week" ? "bg-gradient-to-r from-cyber-glow to-cyber-secondary" : ""}
+          >
+            Semana
+          </Button>
+          <Button
+            variant={period === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setPeriod("month")}
+            className={period === "month" ? "bg-gradient-to-r from-cyber-glow to-cyber-secondary" : ""}
+          >
+            Mes
+          </Button>
+          <Button
+            variant={period === "year" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setPeriod("year")}
+            className={period === "year" ? "bg-gradient-to-r from-cyber-glow to-cyber-secondary" : ""}
+          >
+            Año
+          </Button>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Trash2, Phone, Calendar, Loader2 } from "lucide-react";
+import { Trash2, Phone, Calendar, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,9 +29,10 @@ interface ServicesListProps {
   services: Service[];
   onUpdate: () => void;
   loading: boolean;
+  onEdit: (service: Service) => void;
 }
 
-const ServicesList = ({ services, onUpdate, loading }: ServicesListProps) => {
+const ServicesList = ({ services, onUpdate, loading, onEdit }: ServicesListProps) => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -121,14 +122,24 @@ const ServicesList = ({ services, onUpdate, loading }: ServicesListProps) => {
                 )}
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteId(service.id)}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(service)}
+                  className="text-cyber-glow hover:text-cyber-glow hover:bg-cyber-glow/10"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteId(service.id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </Card>
         ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -7,6 +7,7 @@ import StatsCard from "@/components/StatsCard";
 import ServiceForm from "@/components/ServiceForm";
 import ServicesList from "@/components/ServicesList";
 import RevenueChart from "@/components/RevenueChart";
+import SearchFilters from "@/components/SearchFilters";
 
 interface Service {
   id: string;
@@ -22,6 +23,8 @@ const Index = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
   useEffect(() => {
     fetchServices();
@@ -68,7 +71,31 @@ const Index = () => {
     };
   };
 
+  const filteredServices = useMemo(() => {
+    if (!searchTerm) return services;
+    
+    const term = searchTerm.toLowerCase();
+    return services.filter(
+      (service) =>
+        service.client_name.toLowerCase().includes(term) ||
+        service.service_type.toLowerCase().includes(term) ||
+        (service.client_phone && service.client_phone.toLowerCase().includes(term))
+    );
+  }, [services, searchTerm]);
+
   const stats = calculateStats();
+
+  const handleEdit = (service: Service) => {
+    setEditingService(service);
+    setIsFormOpen(true);
+  };
+
+  const handleFormClose = (open: boolean) => {
+    setIsFormOpen(open);
+    if (!open) {
+      setEditingService(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 relative overflow-hidden">
@@ -123,7 +150,10 @@ const Index = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-foreground">Servicios Recientes</h2>
             <Button
-              onClick={() => setIsFormOpen(true)}
+              onClick={() => {
+                setEditingService(null);
+                setIsFormOpen(true);
+              }}
               className="bg-gradient-to-r from-cyber-glow to-cyber-secondary text-primary-foreground hover:opacity-90 transition-opacity shadow-[0_0_20px_hsl(var(--cyber-glow)/0.3)]"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -131,18 +161,22 @@ const Index = () => {
             </Button>
           </div>
 
+          <SearchFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
           <ServicesList 
-            services={services} 
+            services={filteredServices} 
             onUpdate={fetchServices}
             loading={loading}
+            onEdit={handleEdit}
           />
         </div>
       </div>
 
       <ServiceForm
         open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        onOpenChange={handleFormClose}
         onSuccess={fetchServices}
+        service={editingService}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+interface Service {
+  id: string;
+  client_name: string;
+  client_phone: string | null;
+  service_type: string;
+  price: number;
+  notes: string | null;
+  created_at: string;
+}
+
 interface ServiceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  service?: Service | null;
 }
 
-const ServiceForm = ({ open, onOpenChange, onSuccess }: ServiceFormProps) => {
+const ServiceForm = ({ open, onOpenChange, onSuccess, service }: ServiceFormProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     client_name: "",
@@ -23,6 +34,26 @@ const ServiceForm = ({ open, onOpenChange, onSuccess }: ServiceFormProps) => {
     price: "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (service) {
+      setFormData({
+        client_name: service.client_name,
+        client_phone: service.client_phone || "",
+        service_type: service.service_type,
+        price: service.price.toString(),
+        notes: service.notes || "",
+      });
+    } else {
+      setFormData({
+        client_name: "",
+        client_phone: "",
+        service_type: "",
+        price: "",
+        notes: "",
+      });
+    }
+  }, [service, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,19 +65,32 @@ const ServiceForm = ({ open, onOpenChange, onSuccess }: ServiceFormProps) => {
 
     try {
       setLoading(true);
-      const { error } = await supabase.from("services").insert([
-        {
-          client_name: formData.client_name,
-          client_phone: formData.client_phone || null,
-          service_type: formData.service_type,
-          price: parseFloat(formData.price),
-          notes: formData.notes || null,
-        },
-      ]);
+      
+      const serviceData = {
+        client_name: formData.client_name,
+        client_phone: formData.client_phone || null,
+        service_type: formData.service_type,
+        price: parseFloat(formData.price),
+        notes: formData.notes || null,
+      };
 
-      if (error) throw error;
+      if (service) {
+        // Update existing service
+        const { error } = await supabase
+          .from("services")
+          .update(serviceData)
+          .eq("id", service.id);
 
-      toast.success("Servicio registrado exitosamente");
+        if (error) throw error;
+        toast.success("Servicio actualizado exitosamente");
+      } else {
+        // Insert new service
+        const { error } = await supabase.from("services").insert([serviceData]);
+
+        if (error) throw error;
+        toast.success("Servicio registrado exitosamente");
+      }
+
       setFormData({
         client_name: "",
         client_phone: "",
@@ -68,7 +112,7 @@ const ServiceForm = ({ open, onOpenChange, onSuccess }: ServiceFormProps) => {
       <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50 shadow-[0_8px_32px_hsl(var(--background)/0.4)]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-cyber-glow to-cyber-secondary bg-clip-text text-transparent">
-            Nuevo Servicio
+            {service ? "Editar Servicio" : "Nuevo Servicio"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">

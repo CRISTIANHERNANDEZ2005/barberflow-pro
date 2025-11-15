@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, BarChart3, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatsCard from "@/components/StatsCard";
 import ServiceForm from "@/components/ServiceForm";
 import ServicesList from "@/components/ServicesList";
@@ -114,62 +115,87 @@ const Index = () => {
           <p className="text-muted-foreground text-lg">Sistema de Gestión Profesional</p>
         </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatsCard
-            title="Servicios Totales"
-            value={stats.totalServices}
-            subtitle="Registros históricos"
-            icon="scissors"
-          />
-          <StatsCard
-            title="Ingresos Hoy"
-            value={`$${stats.todayRevenue.toFixed(2)}`}
-            subtitle={`${stats.todayServices} servicios`}
-            icon="dollar"
-          />
-          <StatsCard
-            title="Ingresos Mes"
-            value={`$${stats.monthRevenue.toFixed(2)}`}
-            subtitle="Acumulado mensual"
-            icon="trending"
-          />
-          <StatsCard
-            title="Promedio/Servicio"
-            value={`$${services.length > 0 ? (stats.monthRevenue / services.filter(s => new Date(s.created_at) >= new Date(new Date().setDate(1))).length || 0).toFixed(2) : '0.00'}`}
-            subtitle="Este mes"
-            icon="chart"
-          />
-        </div>
-
-        {/* Chart Section */}
-        <RevenueChart services={services} />
-
-        {/* Services Section */}
-        <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border/50 p-6 shadow-[0_8px_32px_hsl(var(--background)/0.4)]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-foreground">Servicios Recientes</h2>
-            <Button
-              onClick={() => {
-                setEditingService(null);
-                setIsFormOpen(true);
-              }}
-              className="bg-gradient-to-r from-cyber-glow to-cyber-secondary text-primary-foreground hover:opacity-90 transition-opacity shadow-[0_0_20px_hsl(var(--cyber-glow)/0.3)]"
+        {/* Main Tabs Navigation */}
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8 bg-card/50 backdrop-blur-xl border border-border/50 p-1">
+            <TabsTrigger 
+              value="dashboard" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyber-glow data-[state=active]:to-cyber-secondary data-[state=active]:text-primary-foreground"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Servicio
-            </Button>
-          </div>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Estadísticas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="services"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyber-glow data-[state=active]:to-cyber-secondary data-[state=active]:text-primary-foreground"
+            >
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Servicios
+            </TabsTrigger>
+          </TabsList>
 
-          <SearchFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+          {/* Dashboard/Statistics Tab */}
+          <TabsContent value="dashboard" className="space-y-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard
+                title="Servicios Totales"
+                value={stats.totalServices}
+                subtitle="Registros históricos"
+                icon="scissors"
+              />
+              <StatsCard
+                title="Ingresos Hoy"
+                value={`$${stats.todayRevenue.toFixed(2)}`}
+                subtitle={`${stats.todayServices} servicios`}
+                icon="dollar"
+              />
+              <StatsCard
+                title="Ingresos Mes"
+                value={`$${stats.monthRevenue.toFixed(2)}`}
+                subtitle="Acumulado mensual"
+                icon="trending"
+              />
+              <StatsCard
+                title="Promedio/Servicio"
+                value={`$${services.length > 0 ? (stats.monthRevenue / services.filter(s => new Date(s.created_at) >= new Date(new Date().setDate(1))).length || 0).toFixed(2) : '0.00'}`}
+                subtitle="Este mes"
+                icon="chart"
+              />
+            </div>
 
-          <ServicesList 
-            services={filteredServices} 
-            onUpdate={fetchServices}
-            loading={loading}
-            onEdit={handleEdit}
-          />
-        </div>
+            {/* Chart Section */}
+            <RevenueChart services={services} />
+          </TabsContent>
+
+          {/* Services Management Tab */}
+          <TabsContent value="services">
+            <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border/50 p-6 shadow-[0_8px_32px_hsl(var(--background)/0.4)]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Gestión de Servicios</h2>
+                <Button
+                  onClick={() => {
+                    setEditingService(null);
+                    setIsFormOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-cyber-glow to-cyber-secondary text-primary-foreground hover:opacity-90 transition-opacity shadow-[0_0_20px_hsl(var(--cyber-glow)/0.3)]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Servicio
+                </Button>
+              </div>
+
+              <SearchFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
+              <ServicesList 
+                services={filteredServices} 
+                onUpdate={fetchServices}
+                loading={loading}
+                onEdit={handleEdit}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <ServiceForm
